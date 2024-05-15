@@ -1,0 +1,23 @@
+# permissions for end users to view cmmonitors.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: kubesysadm
+    app.kubernetes.io/managed-by: kustomize
+  name: cmmonitor-viewer-role
+rules:
+- apiGroups:
+  - monitoring.sysadm.cn
+  resources:
+  - cmmonitors
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - monitoring.sysadm.cn
+  resources:
+  - cmmonitors/status
+  verbs:
+  - get

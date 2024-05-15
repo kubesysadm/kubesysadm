@@ -61,3 +61,6 @@ kubernetes.tar.gz
 
 # go vendor directory
 vendor
+
+# private documents of developers
+myDocs
