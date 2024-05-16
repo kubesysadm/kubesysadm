@@ -33,6 +33,10 @@ jobs:
 
       - name: Run verify test
         run: |
+          chmod +x bin/controller-gen-v0.14.0
+          chmod +x bin/kustomize-v5.3.0
+          make manifests
+          make install
           make lint
           make lint-fix
           make test
