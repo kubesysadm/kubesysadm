@@ -35,5 +35,7 @@ jobs:
         run: |
           make lint
           make lint-fix
-          make test
+          make fmt
+          make vet
+          make verify
         working-directory: ./src/github.com/${{ github.repository }}
