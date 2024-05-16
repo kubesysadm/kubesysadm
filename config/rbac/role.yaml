@@ -1,0 +1,32 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - monitoring.sysadm.cn
+  resources:
+  - cmmonitors
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitoring.sysadm.cn
+  resources:
+  - cmmonitors/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - monitoring.sysadm.cn
+  resources:
+  - cmmonitors/status
+  verbs:
+  - get
+  - patch
+  - update
