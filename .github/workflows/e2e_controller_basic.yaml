@@ -38,4 +38,4 @@ jobs:
 
       - name: Run E2E Tests
         run: |
-          make e2e-test CC=/usr/local/musl/bin/musl-gcc
+          make test-e2e CC=/usr/local/musl/bin/musl-gcc
