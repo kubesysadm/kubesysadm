@@ -32,8 +32,10 @@ fi
 
 if [ "X${TMP_DIFFROOT}" == "X" ]; then
    PKGROOT="${SCRIPT_ROOT}/api"
+   MANIFESTSROOT="${SCRIPT_ROOT}/config"
 else
-   PKGROOT="${TMP_DIFFROOT}"
+   PKGROOT="${TMP_DIFFROOT}/api"
+   MANIFESTSROOT="${TMP_DIFFROOT}/config"
 fi
 
 chmod +x ${CONTROLLER_GEN}
@@ -42,6 +44,12 @@ do
   ${CONTROLLER_GEN} object:headerFile="hack/boilerplate.go.txt" paths="${PKGROOT}/${p}"
   if [ $? -ne 0 ]; then
      echo "generating code for ${p} error"
+     exit 1
+  fi
+
+  ${CONTROLLER_GEN} rbac:roleName=manager-role crd webhook paths="${PKGROOT}/${p}" output:crd:artifacts:config="${MANIFESTSROOT}/crd/bases"
+  if [ $? -ne 0 ]; then
+     echo "generating manifests for ${p} error"
      exit 1
   fi
 done
