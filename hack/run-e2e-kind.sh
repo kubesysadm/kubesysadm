@@ -134,7 +134,6 @@ install-ginkgo-if-not-exist
 case ${E2E_TYPE} in
 "ALL")
     echo "Running e2e..."
-
     ;;
 "KSCTL")
     echo "Running ksctl e2e suite..."
