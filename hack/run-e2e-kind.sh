@@ -37,9 +37,6 @@ Customize kind options other than --name:
 
     export KIND_OPT=<kind options>
 
-Disable displaying volcano component logs:
-
-    export SHOW_VOLCANO_LOGS=0
 "
   exit 0
 fi
@@ -74,11 +71,15 @@ function install-kubesysadm {
 
   echo "Install volcano chart with crd version $crd_version"
   helm install ${CLUSTER_NAME} installer/helm/kubesysadm --namespace ${NAMESPACE} --kubeconfig ${KUBECONFIG} \
-    --set basic.image_pull_policy=IfNotPresent \
-    --set basic.image_tag_version=${TAG} \
-    --set basic.scheduler_config_file=config/volcano-scheduler-ci.conf \
-    --set basic.crd_version=${crd_version} \
+    --set image.imagePrefix=${IMAGE_PREFIX} \
+    --set image.controllerManager=${CONTROLLER_IMAGE} \
+    --set image.controllerManagerTag=${CONTROLLER_IMAGE_TAG} \
     --wait
+}
+
+function generate-log {
+    echo "Generating kubesysadm log files"
+    kubectl logs deployment/${CLUSTER_NAME}-controller-manager -n ${NAMESPACE} > kubesysadm-controller-manager.log
 }
 
 
@@ -93,3 +94,21 @@ install-kubesysadm
 
 # Run e2e test
 cd ${KS_ROOT}
+
+install-ginkgo-if-not-exist
+
+case ${E2E_TYPE} in
+"ALL")
+    echo "Running e2e..."
+
+    ;;
+"KSCTL")
+    echo "Running ksctl e2e suite..."
+    KUBECONFIG=${KUBECONFIG} ginkgo -r --slow-spec-threshold='30s' --progress ./test/e2e/
+    ;;
+esac
+
+if [[ $? -ne 0 ]]; then
+  generate-log
+  exit 1
+fi
