@@ -36,6 +36,7 @@ else
    PKGROOT="${TMP_DIFFROOT}"
 fi
 
+chmod +x ${CONTROLLER_GEN}
 for p in ${PACKAGE_LIST}
 do
   ${CONTROLLER_GEN} object:headerFile="hack/boilerplate.go.txt" paths="${PKGROOT}/${p}"
