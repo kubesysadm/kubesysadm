@@ -40,8 +40,6 @@ cleanup
 mkdir -p "${TMP_DIFFROOT}/api"
 mkdir -p "${TMP_DIFFROOT}/config"
 cp -a "${DIFFROOT}"/* "${TMP_DIFFROOT}/api"
-mkdir -p ${TMP_DIFFROOT}
-cp -a "${DIFFROOT}"/* "${TMP_DIFFROOT}"
 cd ${SCRIPT_ROOT}
 
 . ${SCRIPT_ROOT}/hack/update-gencode.sh
