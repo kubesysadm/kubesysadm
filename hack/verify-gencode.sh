@@ -46,7 +46,6 @@ cd ${SCRIPT_ROOT}
 echo "diffing ${DIFFROOT} against freshly generated codegen"
 ret=0
 diff -Naupr "${DIFFROOT}" "${TMP_DIFFROOT}/api" || ret=$?
-diff -Naupr "${DIFFROOT}" "${TMP_DIFFROOT}" || ret=$?
 if [[ $ret -eq 0 ]]
 then
   echo "${DIFFROOT} up to date."
