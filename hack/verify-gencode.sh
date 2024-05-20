@@ -23,6 +23,7 @@ DIFFROOT="${SCRIPT_ROOT}/api"
 DIFFMANIFESTSROOT="${SCRIPT_ROOT}/config"
 TMP_DIFFROOT="${SCRIPT_ROOT}/_tmp"
 TMP_DIFFMANIFESTSROOT="${TMP_DIFFROOT}/config"
+TMP_DIFFROOT="${SCRIPT_ROOT}/_tmp"
 CONTROLLER_TOOLS_VERSION="v0.14.0"
 CONTROLLER_GEN=${SCRIPT_ROOT}/bin/controller-gen-${CONTROLLER_TOOLS_VERSION}
 DEFINED_PACKAGE_LIST="v1beta1"
@@ -39,12 +40,15 @@ cleanup
 mkdir -p "${TMP_DIFFROOT}/api"
 mkdir -p "${TMP_DIFFROOT}/config"
 cp -a "${DIFFROOT}"/* "${TMP_DIFFROOT}/api"
+mkdir -p ${TMP_DIFFROOT}
+cp -a "${DIFFROOT}"/* "${TMP_DIFFROOT}"
 cd ${SCRIPT_ROOT}
 
 . ${SCRIPT_ROOT}/hack/update-gencode.sh
 echo "diffing ${DIFFROOT} against freshly generated codegen"
 ret=0
 diff -Naupr "${DIFFROOT}" "${TMP_DIFFROOT}/api" || ret=$?
+diff -Naupr "${DIFFROOT}" "${TMP_DIFFROOT}" || ret=$?
 if [[ $ret -eq 0 ]]
 then
   echo "${DIFFROOT} up to date."

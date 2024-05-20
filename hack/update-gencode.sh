@@ -36,6 +36,8 @@ if [ "X${TMP_DIFFROOT}" == "X" ]; then
 else
    PKGROOT="${TMP_DIFFROOT}/api"
    MANIFESTSROOT="${TMP_DIFFROOT}/config"
+else
+   PKGROOT="${TMP_DIFFROOT}"
 fi
 
 chmod +x ${CONTROLLER_GEN}
