@@ -21,9 +21,13 @@ export LOG_LEVEL=3
 export CLEANUP_CLUSTER=${CLEANUP_CLUSTER:-1}
 
 NAMESPACE=${NAMESPACE:-kube-sysadm}
-CLUSTER_NAME=${CLUSTER_NAME:-integration}\
+CLUSTER_NAME=${CLUSTER_NAME:-integration}
 
 export CLUSTER_CONTEXT="--name ${CLUSTER_NAME}"
+export SHOW_KUBESYSADM_LOGS=${SHOW_KUBESYSADM_LOGS:-1}
+export CONTROLLER_IMAGE_NAME=${CONTROLLER_IMAGE:-kubesysadm-controller}
+export CONTROLLER_IMAGE_TAG=${IMAGE_TAG:-latest}
+export CONTROLLER_IMAGE_PREFIX=${IMAGE_PREFIX:-kubesysadm}
 
 export KIND_OPT=${KIND_OPT:="--config ${KS_ROOT}/hack/e2e-kind-config.yaml"}
 
@@ -37,6 +41,8 @@ Customize kind options other than --name:
 
     export KIND_OPT=<kind options>
 
+Disable displaying kubesysadm component logs:
+    export SHOW_KUBESYSADM_LOGS=0
 "
   exit 0
 fi
@@ -77,11 +83,39 @@ function install-kubesysadm {
     --wait
 }
 
+function uninstall-kubesysadm {
+  helm uninstall ${CLUSTER_NAME} -n ${NAMESPACE}
+}
+
 function generate-log {
     echo "Generating kubesysadm log files"
     kubectl logs deployment/${CLUSTER_NAME}-controller-manager -n ${NAMESPACE} > kubesysadm-controller-manager.log
 }
 
+function show-log() {
+  log_files=("kubesysadm-controller-manager.log" )
+  for log_file in "${log_files[@]}"; do
+    if [ -f "$log_file" ]; then
+      echo "Showing ${log_file}..."
+      cat "$log_file"
+    else
+      echo "${log_file} not found"
+    fi
+  done
+}
+
+
+# clean up
+function cleanup {
+  uninstall-kubesysadm
+
+  echo "Running kind: [kind delete cluster ${CLUSTER_CONTEXT}]"
+  kind delete cluster ${CLUSTER_CONTEXT}
+
+  if [[ ${SHOW_KUBESYSADM_LOGS} -eq 1 ]]; then
+    show-log
+  fi
+}
 
 check-prerequisites
 kind-up-cluster

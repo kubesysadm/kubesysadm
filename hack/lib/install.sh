@@ -38,7 +38,7 @@ function kind-up-cluster {
 
   echo
   echo "Loading docker images into kind cluster"
-  kind load docker-image ${IMAGE_PREFIX}/kubesysadm-controller:${TAG} ${CLUSTER_CONTEXT}
+  kind load docker-image ${CONTROLLER_IMAGE_PREFIX}/${CONTROLLER_IMAGE_NAME}:${CONTROLLER_IMAGE_TAG} ${CLUSTER_CONTEXT}
 }
 
 # check if kind installed
