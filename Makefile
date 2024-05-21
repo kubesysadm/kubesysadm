@@ -6,6 +6,7 @@ IMG ?= $(IMAGE_PREFIX)/$(CONTROLLER_IMAGE):$(IMAGE_TAG)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.29.0
 
+OS=$(shell uname -s)
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -74,6 +75,15 @@ fmt: ## Run go fmt against code.
 .PHONY: vet
 vet: ## Run go vet against code.
 	go vet ./...
+
+.PHONY: unit-test
+unit-test:
+	go clean -testcache
+	if [ ${OS} = 'Darwin' ];then\
+		GOOS=darwin go list ./... | grep -v "/e2e" | xargs  go test;\
+	else\
+		go test -p 8 -race $$(find pkg cmd -type f -name '*_test.go' | sed -r 's|/[^/]+$$||' | sort | uniq | sed "s|^|volcano.sh/volcano/|");\
+	fi;
 
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.

@@ -1,0 +1,37 @@
+name: Controller Manager Unit Test
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-22.04
+    name: Controller Manager Unit Test
+    timeout-minutes: 40
+    env:
+      GOPATH: /home/runner/work/${{ github.repository }}
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.22.x
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          path: ./src/github.com/${{ github.repository }}
+
+      - uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+
+      - name: Run Controller Manager Unit Test
+        run: |
+          make unit-test
+        working-directory: ./src/github.com/${{ github.repository }}
