@@ -75,10 +75,10 @@ function install-kubesysadm {
   echo "Ensure create namespace"
   kubectl apply -f installer/namespace.yaml
 
-  echo "Install volcano chart with crd version $crd_version"
+  echo "Install kubesysadm chart"
   helm install ${CLUSTER_NAME} installer/helm/kubesysadm --namespace ${NAMESPACE} --kubeconfig ${KUBECONFIG} \
-    --set image.imagePrefix=${IMAGE_PREFIX} \
-    --set image.controllerManager=${CONTROLLER_IMAGE} \
+    --set image.imagePrefix=${CONTROLLER_IMAGE_PREFIX} \
+    --set image.controllerManager=${CONTROLLER_IMAGE_NAME} \
     --set image.controllerManagerTag=${CONTROLLER_IMAGE_TAG} \
     --wait
 }
@@ -138,7 +138,7 @@ case ${E2E_TYPE} in
     ;;
 "KSCTL")
     echo "Running ksctl e2e suite..."
-    KUBECONFIG=${KUBECONFIG} ginkgo -r --slow-spec-threshold='30s' --progress ./test/e2e/
+    KUBECONFIG=${KUBECONFIG} KIND_CLUSTER=${CLUSTER_NAME} ginkgo -r --slow-spec-threshold='30s' --progress ./test/e2e/
     ;;
 esac
 
