@@ -56,9 +56,9 @@ function check-kind {
 # check if the required images exist
 function check-images {
   echo "Checking whether the required images exist"
-  docker image inspect "${IMAGE_PREFIX}/kubesysadm-controller:${TAG}" > /dev/null
+  docker image inspect "${CONTROLLER_IMAGE_PREFIX}/${CONTROLLER_IMAGE_NAME}:${CONTROLLER_IMAGE_TAG}" > /dev/null
   if [[ $? -ne 0 ]]; then
-    echo -e "\033[31mERROR\033[0m: ${IMAGE_PREFIX}/kubesysadm-controller:${TAG} does not exist"
+    echo -e "\033[31mERROR\033[0m: ${CONTROLLER_IMAGE_PREFIX}/${CONTROLLER_IMAGE_NAME}:${CONTROLLER_IMAGE_TAG} does not exist"
     exit 1
   fi
 
