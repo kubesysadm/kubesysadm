@@ -21,9 +21,13 @@ export LOG_LEVEL=3
 export CLEANUP_CLUSTER=${CLEANUP_CLUSTER:-1}
 
 NAMESPACE=${NAMESPACE:-kube-sysadm}
-CLUSTER_NAME=${CLUSTER_NAME:-integration}\
+CLUSTER_NAME=${CLUSTER_NAME:-integration}
 
 export CLUSTER_CONTEXT="--name ${CLUSTER_NAME}"
+export SHOW_KUBESYSADM_LOGS=${SHOW_KUBESYSADM_LOGS:-1}
+export CONTROLLER_IMAGE_NAME=${CONTROLLER_IMAGE:-kubesysadm-controller}
+export CONTROLLER_IMAGE_TAG=${IMAGE_TAG:-latest}
+export CONTROLLER_IMAGE_PREFIX=${IMAGE_PREFIX:-kubesysadm}
 
 export KIND_OPT=${KIND_OPT:="--config ${KS_ROOT}/hack/e2e-kind-config.yaml"}
 
@@ -37,9 +41,8 @@ Customize kind options other than --name:
 
     export KIND_OPT=<kind options>
 
-Disable displaying volcano component logs:
-
-    export SHOW_VOLCANO_LOGS=0
+Disable displaying kubesysadm component logs:
+    export SHOW_KUBESYSADM_LOGS=0
 "
   exit 0
 fi
@@ -72,15 +75,47 @@ function install-kubesysadm {
   echo "Ensure create namespace"
   kubectl apply -f installer/namespace.yaml
 
-  echo "Install volcano chart with crd version $crd_version"
+  echo "Install kubesysadm chart"
   helm install ${CLUSTER_NAME} installer/helm/kubesysadm --namespace ${NAMESPACE} --kubeconfig ${KUBECONFIG} \
-    --set basic.image_pull_policy=IfNotPresent \
-    --set basic.image_tag_version=${TAG} \
-    --set basic.scheduler_config_file=config/volcano-scheduler-ci.conf \
-    --set basic.crd_version=${crd_version} \
+    --set image.imagePrefix=${CONTROLLER_IMAGE_PREFIX} \
+    --set image.controllerManager=${CONTROLLER_IMAGE_NAME} \
+    --set image.controllerManagerTag=${CONTROLLER_IMAGE_TAG} \
     --wait
 }
 
+function uninstall-kubesysadm {
+  helm uninstall ${CLUSTER_NAME} -n ${NAMESPACE}
+}
+
+function generate-log {
+    echo "Generating kubesysadm log files"
+    kubectl logs deployment/${CLUSTER_NAME}-controller-manager -n ${NAMESPACE} > kubesysadm-controller-manager.log
+}
+
+function show-log() {
+  log_files=("kubesysadm-controller-manager.log" )
+  for log_file in "${log_files[@]}"; do
+    if [ -f "$log_file" ]; then
+      echo "Showing ${log_file}..."
+      cat "$log_file"
+    else
+      echo "${log_file} not found"
+    fi
+  done
+}
+
+
+# clean up
+function cleanup {
+  uninstall-kubesysadm
+
+  echo "Running kind: [kind delete cluster ${CLUSTER_CONTEXT}]"
+  kind delete cluster ${CLUSTER_CONTEXT}
+
+  if [[ ${SHOW_KUBESYSADM_LOGS} -eq 1 ]]; then
+    show-log
+  fi
+}
 
 check-prerequisites
 kind-up-cluster
@@ -93,3 +128,21 @@ install-kubesysadm
 
 # Run e2e test
 cd ${KS_ROOT}
+
+install-ginkgo-if-not-exist
+
+case ${E2E_TYPE} in
+"ALL")
+    echo "Running e2e..."
+
+    ;;
+"KSCTL")
+    echo "Running ksctl e2e suite..."
+    KUBECONFIG=${KUBECONFIG} KIND_CLUSTER=${CLUSTER_NAME} ginkgo -r --slow-spec-threshold='30s' --progress ./test/e2e/
+    ;;
+esac
+
+if [[ $? -ne 0 ]]; then
+  generate-log
+  exit 1
+fi

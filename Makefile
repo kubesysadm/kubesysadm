@@ -1,7 +1,11 @@
+CONTROLLER_IMAGE ?= kubesysadm-controller
+IMAGE_TAG ?= latest
+IMAGE_PREFIX ?= kubesysadm
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= $(IMAGE_PREFIX)/$(CONTROLLER_IMAGE):$(IMAGE_TAG)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.29.0
+
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -9,6 +13,9 @@ GOBIN=$(shell go env GOPATH)/bin
 else
 GOBIN=$(shell go env GOBIN)
 endif
+
+BIN_DIR=_output/bin
+RELEASE_DIR=_output/release
 
 # CONTAINER_TOOL defines the container tool to be used for building images.
 # Be aware that the target commands are only tested with Docker which is
@@ -40,6 +47,10 @@ all: build
 .PHONY: help
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+
+init:
+	mkdir -p ${BIN_DIR}
+	mkdir -p ${RELEASE_DIR}
 
 ##@ Development
 
@@ -73,6 +84,11 @@ test: manifests generate fmt vet envtest ## Run tests.
 test-e2e:
 	go test ./test/e2e/ -v -ginkgo.v
 
+# e2e test for kubesysadm-controller-manager
+.PHONY: test-e2e-ksctl
+test-e2e-ksctl: ksctl docker-build
+	E2E_TYPE=KSCTL ./hack/run-e2e-kind.sh
+
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter & yamllint
 	$(GOLANGCI_LINT) run
@@ -82,6 +98,9 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 	$(GOLANGCI_LINT) run --fix
 
 ##@ Build
+.PHONY: ksctl
+ksctl: init
+	go build -o ${BIN_DIR}/kubesysadm-controller-manager cmd/main.go
 
 .PHONY: build
 build: manifests generate fmt vet ## Build manager binary.
