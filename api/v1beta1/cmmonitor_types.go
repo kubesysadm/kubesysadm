@@ -28,14 +28,23 @@ type CmMonitorSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of CmMonitor. Edit cmmonitor_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// NameSpace the namespace which the configMap or Secret monitored in
+	NameSpace string `json:"namespace,omitempty" protobuf:"bytes,3,opt,name=namespace"`
+
+	// Name of configMap of Secret which will be monitored
+	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
+
+	// Kind configMap or secret
+	Kind string `json:"kind,omitempty" protobuf:"bytes,1,opt,name=kind"`
 }
 
 // CmMonitorStatus defines the observed state of CmMonitor
 type CmMonitorStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	// last version of configMap or Secret
+	LastVersion string `json:"lastVersion,omitempty" protobuf:"bytes,1,opt,name=lastVersion"`
 }
 
 //+kubebuilder:object:root=true

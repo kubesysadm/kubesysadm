@@ -18,13 +18,19 @@ package controller
 
 import (
 	"context"
+	kappsv1 "k8s.io/api/apps/v1"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	monitoringv1beta1 "kubesysadm/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	monitoringv1beta1 "kubesysadm/api/v1beta1"
 )
 
 // CmMonitorReconciler reconciles a CmMonitor object
@@ -47,7 +53,8 @@ type CmMonitorReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
 func (r *CmMonitorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	logger := log.FromContext(ctx)
+	logger.Info("req info: ", "NS:", req.Namespace, "Name: ", req.Name, "toString:", req.String())
 
 	// TODO(user): your logic here
 
@@ -58,5 +65,91 @@ func (r *CmMonitorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 func (r *CmMonitorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&monitoringv1beta1.CmMonitor{}).
+		Watches(
+			&corev1.ConfigMap{},
+			handler.EnqueueRequestsFromMapFunc(r.getChangedMap),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+		).
+		Watches(
+			&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(r.getChangedSecret),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+		).
 		Complete(r)
+}
+
+func (r *CmMonitorReconciler) getChangedMap(ctx context.Context, configMap client.Object) []reconcile.Request {
+	logger := log.FromContext(ctx)
+	logger.Info("changed configMap: ", "NS:", configMap.GetNamespace(), "name: ", configMap.GetName(),
+		"version:", configMap.GetResourceVersion())
+	ns := configMap.GetNamespace()
+	cmName := configMap.GetName()
+
+	var cmMonitorList monitoringv1beta1.CmMonitorList
+	e := r.List(ctx, &cmMonitorList)
+	if e != nil {
+		logger.Error(e, "get configMap monitored error")
+		return nil
+	}
+
+	for _, item := range cmMonitorList.Items {
+		logger.Info("monitor configmap item:", "namespace:", item.Spec.NameSpace, "name:", item.Spec.Name,
+			"kind:", item.Spec.Kind)
+		kind := strings.TrimSpace(strings.ToLower(item.Spec.Kind))
+		if kind == "cm" || kind == "configmap" {
+			if ns == item.Spec.NameSpace && cmName == item.Spec.Name {
+				lastVersion := item.Status.LastVersion
+				item.Status.LastVersion = configMap.GetResourceVersion()
+				e := r.Client.Status().Update(ctx, &item)
+				if e != nil {
+					logger.Error(e, "update cmMonitor status error")
+				}
+
+				logger.Info("last version:", "version: ", lastVersion)
+
+				if lastVersion == "" || lastVersion >= configMap.GetResourceVersion() {
+					continue
+				}
+				e = r.restartWorkloadWithConfigMapChanged(ctx, ns, cmName)
+				if e != nil {
+					logger.Error(e, "restart workload error")
+				} else {
+					logger.Info("workload has restarted")
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (r *CmMonitorReconciler) getChangedSecret(ctx context.Context, secret client.Object) []reconcile.Request {
+	logger := log.FromContext(ctx)
+	logger.Info("changed secret: ", "NS:", secret.GetNamespace(), "name: ", secret.GetName(),
+		"version:", secret.GetResourceVersion())
+
+	return nil
+}
+
+func (r *CmMonitorReconciler) restartWorkloadWithConfigMapChanged(ctx context.Context, ns, cm string) error {
+	logger := log.FromContext(ctx)
+	deployList := kappsv1.DeploymentList{}
+	listOpts := &client.ListOptions{Namespace: ns}
+	e := r.Client.List(ctx, &deployList, listOpts)
+	if e != nil {
+		return e
+	}
+
+	for _, item := range deployList.Items {
+		volumes := item.Spec.Template.Spec.Volumes
+		for _, vol := range volumes {
+			if vol.ConfigMap != nil {
+				podCmName := vol.ConfigMap.LocalObjectReference.Name
+				if strings.TrimSpace(strings.ToLower(podCmName)) == strings.TrimSpace(strings.ToLower(cm)) {
+					logger.Info("found related deployment: ", "name:", item.Name, "namespace:", item.Namespace)
+				}
+			}
+		}
+	}
+
+	return nil
 }
