@@ -66,3 +66,6 @@ vendor
 
 # private documents of developers
 myDocs
+
+# yamls for local testing
+testYamls

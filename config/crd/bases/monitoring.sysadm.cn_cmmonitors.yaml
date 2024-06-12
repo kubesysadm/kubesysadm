@@ -39,13 +39,23 @@ spec:
           spec:
             description: CmMonitorSpec defines the desired state of CmMonitor
             properties:
-              foo:
-                description: Foo is an example field of CmMonitor. Edit cmmonitor_types.go
-                  to remove/update
+              kind:
+                description: Kind configMap or secret
+                type: string
+              name:
+                description: Name of configMap of Secret which will be monitored
+                type: string
+              namespace:
+                description: NameSpace the namespace which the configMap or Secret
+                  monitored in
                 type: string
             type: object
           status:
             description: CmMonitorStatus defines the observed state of CmMonitor
+            properties:
+              lastVersion:
+                description: last version of configMap or Secret
+                type: string
             type: object
         type: object
     served: true
