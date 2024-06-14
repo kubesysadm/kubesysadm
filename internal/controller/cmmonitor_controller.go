@@ -20,7 +20,6 @@ import (
 	"context"
 	"strings"
 
-	kappsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -111,12 +110,8 @@ func (r *CmMonitorReconciler) getChangedMap(ctx context.Context, configMap clien
 				if lastVersion == "" || lastVersion >= configMap.GetResourceVersion() {
 					continue
 				}
-				e = r.restartWorkloadWithConfigMapChanged(ctx, ns, cmName)
-				if e != nil {
-					logger.Error(e, "restart workload error")
-				} else {
-					logger.Info("workload has restarted")
-				}
+				r.restartWorkloadWithConfigMapChanged(ctx, ns, cmName)
+
 			}
 		}
 	}
@@ -131,26 +126,33 @@ func (r *CmMonitorReconciler) getChangedSecret(ctx context.Context, secret clien
 	return nil
 }
 
-func (r *CmMonitorReconciler) restartWorkloadWithConfigMapChanged(ctx context.Context, ns, cm string) error {
+func (r *CmMonitorReconciler) restartWorkloadWithConfigMapChanged(ctx context.Context, ns, cm string) {
 	logger := log.FromContext(ctx)
-	deployList := kappsv1.DeploymentList{}
+	podList := corev1.PodList{}
 	listOpts := &client.ListOptions{Namespace: ns}
-	e := r.Client.List(ctx, &deployList, listOpts)
+	e := r.Client.List(ctx, &podList, listOpts)
 	if e != nil {
-		return e
+		logger.Error(e, "get pod list error.")
+		return
 	}
 
-	for _, item := range deployList.Items {
-		volumes := item.Spec.Template.Spec.Volumes
-		for _, vol := range volumes {
+	for _, item := range podList.Items {
+		vols := item.Spec.Volumes
+		for _, vol := range vols {
 			if vol.ConfigMap != nil {
-				podCmName := vol.ConfigMap.LocalObjectReference.Name
-				if strings.TrimSpace(strings.ToLower(podCmName)) == strings.TrimSpace(strings.ToLower(cm)) {
-					logger.Info("found related deployment: ", "name:", item.Name, "namespace:", item.Namespace)
+				cmName := vol.ConfigMap.LocalObjectReference.Name
+				if strings.TrimSpace(strings.ToLower(cmName)) == strings.TrimSpace(strings.ToLower(cm)) {
+					graceSecond := int64(5)
+					deleteOpts := &client.DeleteOptions{GracePeriodSeconds: &graceSecond}
+					e := r.Delete(ctx, &item, deleteOpts)
+					if e != nil {
+						logger.Error(e, "restart pod error")
+						return
+					}
 				}
 			}
+
 		}
 	}
 
-	return nil
 }
