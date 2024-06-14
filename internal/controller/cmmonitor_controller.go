@@ -18,6 +18,8 @@ package controller
 
 import (
 	"context"
+	"strings"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -27,8 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"strings"
-
+	
 	monitoringv1beta1 "kubesysadm/api/v1beta1"
 )
 
@@ -154,5 +155,4 @@ func (r *CmMonitorReconciler) restartWorkloadWithConfigMapChanged(ctx context.Co
 		}
 	}
 
-	return
 }
