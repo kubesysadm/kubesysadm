@@ -18,10 +18,15 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"github.com/go-logr/logr"
 	"strings"
+	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -63,19 +68,15 @@ func (r *CmMonitorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CmMonitorReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&monitoringv1beta1.CmMonitor{}).
-		Watches(
-			&corev1.ConfigMap{},
-			handler.EnqueueRequestsFromMapFunc(r.getChangedMap),
-			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
-		).
-		Watches(
-			&corev1.Secret{},
-			handler.EnqueueRequestsFromMapFunc(r.getChangedSecret),
-			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
-		).
-		Complete(r)
+	b := ctrl.NewControllerManagedBy(mgr)
+	b.For(&monitoringv1beta1.CmMonitor{})
+	b.Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(r.getChangedMap),
+		builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}))
+	b.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.getChangedSecret),
+		builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}))
+
+	return b.Complete(r)
+
 }
 
 func (r *CmMonitorReconciler) getChangedMap(ctx context.Context, configMap client.Object) []reconcile.Request {
@@ -122,37 +123,219 @@ func (r *CmMonitorReconciler) getChangedSecret(ctx context.Context, secret clien
 	logger := log.FromContext(ctx)
 	logger.Info("changed secret: ", "NS:", secret.GetNamespace(), "name: ", secret.GetName(),
 		"version:", secret.GetResourceVersion())
+	ns := secret.GetNamespace()
+	secretName := secret.GetName()
 
+	var cmMonitorList monitoringv1beta1.CmMonitorList
+	e := r.List(ctx, &cmMonitorList)
+	if e != nil {
+		logger.Error(e, "get secret monitored error")
+		return nil
+	}
+
+	for _, item := range cmMonitorList.Items {
+		logger.Info("monitor secret item:", "namespace:", item.Spec.NameSpace, "name:", item.Spec.Name,
+			"kind:", item.Spec.Kind)
+		kind := strings.TrimSpace(strings.ToLower(item.Spec.Kind))
+		if kind == "secret" {
+			if ns == item.Spec.NameSpace && secretName == item.Spec.Name {
+				lastVersion := item.Status.LastVersion
+				item.Status.LastVersion = secret.GetResourceVersion()
+				e := r.Client.Status().Update(ctx, &item)
+				if e != nil {
+					logger.Error(e, "update cmMonitor status error")
+				}
+
+				logger.Info("last version:", "version: ", lastVersion)
+
+				if lastVersion == "" || lastVersion >= secret.GetResourceVersion() {
+					continue
+				}
+				r.restartWorkloadWithSecretChanged(ctx, ns, secretName)
+
+			}
+		}
+	}
 	return nil
 }
 
 func (r *CmMonitorReconciler) restartWorkloadWithConfigMapChanged(ctx context.Context, ns, cm string) {
 	logger := log.FromContext(ctx)
-	podList := corev1.PodList{}
 	listOpts := &client.ListOptions{Namespace: ns}
-	e := r.Client.List(ctx, &podList, listOpts)
+	r.restartDeploys(ctx, logger, cm, "cm", listOpts)
+	r.restartStatefulSet(ctx, logger, cm, "cm", listOpts)
+	r.restartDaemonSet(ctx, logger, cm, "cm", listOpts)
+}
+
+func (r *CmMonitorReconciler) restartWorkloadWithSecretChanged(ctx context.Context, ns, secretName string) {
+	logger := log.FromContext(ctx)
+	listOpts := &client.ListOptions{Namespace: ns}
+	r.restartDeploys(ctx, logger, secretName, "secret", listOpts)
+	r.restartStatefulSet(ctx, logger, secretName, "secret", listOpts)
+	r.restartDaemonSet(ctx, logger, secretName, "secret", listOpts)
+}
+
+func (r *CmMonitorReconciler) restartDeploys(ctx context.Context, logger logr.Logger, cm, kind string, listOpts *client.ListOptions) {
+	deployList := appsv1.DeploymentList{}
+	e := r.Client.List(ctx, &deployList, listOpts)
 	if e != nil {
-		logger.Error(e, "get pod list error.")
+		logger.Error(e, "get Deployment list error.")
 		return
 	}
 
-	for _, item := range podList.Items {
-		vols := item.Spec.Volumes
-		for _, vol := range vols {
-			if vol.ConfigMap != nil {
-				cmName := vol.ConfigMap.LocalObjectReference.Name
-				if strings.TrimSpace(strings.ToLower(cmName)) == strings.TrimSpace(strings.ToLower(cm)) {
-					graceSecond := int64(5)
-					deleteOpts := &client.DeleteOptions{GracePeriodSeconds: &graceSecond}
-					e := r.Delete(ctx, &item, deleteOpts)
-					if e != nil {
-						logger.Error(e, "restart pod error")
-						return
-					}
-				}
+	for _, item := range deployList.Items {
+		if isResourceUsedByPod(item.Spec.Template, cm, kind) {
+			patchData := fmt.Sprintf(`{"spec": {"template": {"metadata": {"annotations": {"kubesysadm.sysadm.cn/restartedAt": "%s"}}}}}`, time.Now().Format("20060102150405"))
+			patch := client.RawPatch(types.MergePatchType, []byte(patchData))
+			e := r.Patch(ctx, &item, patch)
+			if e != nil {
+				logger.Error(e, "patch deployment error.", "namespace: ", item.Namespace, "name:", item.Name)
 			}
+		}
 
+	}
+}
+
+func (r *CmMonitorReconciler) restartStatefulSet(ctx context.Context, logger logr.Logger, cm, kind string, listOpts *client.ListOptions) {
+	stsList := appsv1.StatefulSetList{}
+	e := r.Client.List(ctx, &stsList, listOpts)
+	if e != nil {
+		logger.Error(e, "get StatefulSet list error.")
+		return
+	}
+
+	for _, item := range stsList.Items {
+		if isResourceUsedByPod(item.Spec.Template, cm, kind) {
+			patchData := fmt.Sprintf(`{"spec": {"template": {"metadata": {"annotations": {"kubesysadm.sysadm.cn/restartedAt": "%s"}}}}}`, time.Now().Format("20060102150405"))
+			patch := client.RawPatch(types.MergePatchType, []byte(patchData))
+			e := r.Patch(ctx, &item, patch)
+			if e != nil {
+				logger.Error(e, "patch statefulset error.", "namespace: ", item.Namespace, "name:", item.Name)
+			}
+		}
+
+	}
+}
+
+func (r *CmMonitorReconciler) restartDaemonSet(ctx context.Context, logger logr.Logger, cm, kind string, listOpts *client.ListOptions) {
+	daemonSetList := appsv1.DaemonSetList{}
+	e := r.Client.List(ctx, &daemonSetList, listOpts)
+	if e != nil {
+		logger.Error(e, "get daemonSet list error.")
+		return
+	}
+
+	for _, item := range daemonSetList.Items {
+		if isResourceUsedByPod(item.Spec.Template, cm, kind) {
+			patchData := fmt.Sprintf(`{"spec": {"template": {"metadata": {"annotations": {"kubesysadm.sysadm.cn/restartedAt": "%s"}}}}}`, time.Now().Format("20060102150405"))
+			patch := client.RawPatch(types.MergePatchType, []byte(patchData))
+			e := r.Patch(ctx, &item, patch)
+			if e != nil {
+				logger.Error(e, "patch daemonset error.", "namespace: ", item.Namespace, "name:", item.Name)
+			}
+		}
+
+	}
+}
+
+func isResourceUsedByPod(podSpec corev1.PodTemplateSpec, name, kind string) bool {
+	switch kind {
+	case "cm":
+		return isCmUsedByPod(podSpec, name)
+	case "secret":
+		return isSecretUsedByPod(podSpec, name)
+	}
+
+	return false
+
+}
+
+func isCmUsedByPod(podSpec corev1.PodTemplateSpec, name string) bool {
+	// checking the configMap whether be mounted by the pod
+	vols := podSpec.Spec.Volumes
+	for _, vol := range vols {
+		if vol.ConfigMap != nil {
+			cm := vol.ConfigMap.LocalObjectReference.Name
+			if strings.Compare(cm, name) == 0 {
+				return true
+			}
 		}
 	}
 
+	// checking the configMap used with ENV
+	containers := podSpec.Spec.Containers
+	for _, c := range containers {
+		envs := c.Env
+		for _, env := range envs {
+			if env.ValueFrom != nil && env.ValueFrom.ConfigMapKeyRef != nil {
+				configMapKeyRef := env.ValueFrom.ConfigMapKeyRef
+				cm := configMapKeyRef.LocalObjectReference.Name
+				if strings.Compare(cm, name) == 0 {
+					return true
+				}
+			}
+		}
+	}
+
+	// checking the configMap used with ENV in initContainers
+	initContainers := podSpec.Spec.InitContainers
+	for _, c := range initContainers {
+		envs := c.Env
+		for _, env := range envs {
+			if env.ValueFrom != nil && env.ValueFrom.ConfigMapKeyRef != nil {
+				configMapKeyRef := env.ValueFrom.ConfigMapKeyRef
+				cm := configMapKeyRef.LocalObjectReference.Name
+				if strings.Compare(cm, name) == 0 {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+func isSecretUsedByPod(podSpec corev1.PodTemplateSpec, name string) bool {
+	// checking the secret whether be mounted by the pod
+	vols := podSpec.Spec.Volumes
+	for _, vol := range vols {
+		if vol.Secret != nil {
+			secretName := vol.Secret.SecretName
+			if strings.Compare(secretName, name) == 0 {
+				return true
+			}
+		}
+	}
+
+	// checking the secret used with ENV
+	containers := podSpec.Spec.Containers
+	for _, c := range containers {
+		envs := c.Env
+		for _, env := range envs {
+			if env.ValueFrom != nil && env.ValueFrom.SecretKeyRef != nil {
+				secretKeyRef := env.ValueFrom.SecretKeyRef
+				secretName := secretKeyRef.LocalObjectReference.Name
+				if strings.Compare(secretName, name) == 0 {
+					return true
+				}
+			}
+		}
+	}
+
+	// checking the secret used with ENV in initContainers
+	initContainers := podSpec.Spec.InitContainers
+	for _, c := range initContainers {
+		envs := c.Env
+		for _, env := range envs {
+			if env.ValueFrom != nil && env.ValueFrom.SecretKeyRef != nil {
+				secretKeyRef := env.ValueFrom.SecretKeyRef
+				secretName := secretKeyRef.LocalObjectReference.Name
+				if strings.Compare(secretName, name) == 0 {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
 }
