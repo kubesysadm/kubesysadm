@@ -24,7 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"kubesysadm/test/utils"
+	"sysadm.cn/kubesysadm/test/utils"
 )
 
 const namespace = "kubesysadm-system"
