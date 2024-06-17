@@ -1,4 +1,4 @@
-module kubesysadm
+module sysadm.cn/kubesysadm
 
 go 1.22.0
 
