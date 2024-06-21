@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	monitoringv1beta1 "kubesysadm.sysadm.cn/kubesysadm/api/v1beta1"
+	monitoringv1beta1 "github.com/kubesysadm/kubesysadm/api/v1beta1"
 )
 
 // CmMonitorReconciler reconciles a CmMonitor object
