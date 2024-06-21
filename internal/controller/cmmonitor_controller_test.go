@@ -27,7 +27,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	monitoringv1beta1 "kubesysadm.sysadm.cn/kubesysadm/api/v1beta1"
+	monitoringv1beta1 "github.com/kubesysadm/kubesysadm/api/v1beta1"
 )
 
 var _ = Describe("CmMonitor Controller", func() {
