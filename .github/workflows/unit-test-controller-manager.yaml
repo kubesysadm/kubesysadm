@@ -1,4 +1,4 @@
-name: Code Verify
+name: Unit Test
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-22.04
-    name: Verify codes, generated files
+    name: Controller Manager Unit Test
     timeout-minutes: 40
     env:
       GOPATH: /home/runner/work/${{ github.repository }}
@@ -31,11 +31,7 @@ jobs:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
 
-      - name: Run verify test
+      - name: Run Unit Test
         run: |
-          make lint-fix
-          make lint
-          make fmt
-          make vet
-          make verify
+          make test
         working-directory: ./src/github.com/${{ github.repository }}
