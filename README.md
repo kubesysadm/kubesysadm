@@ -5,9 +5,12 @@
 ---
 [![Go Report Card](https://goreportcard.com/badge/github.com/kubesysadm/kubesysadm)](https://goreportcard.com/report/github.com/kubesysadm/kubesysadm)
 [![RepoSize](https://img.shields.io/github/repo-size/kubesysadm/kubesysadm.svg)](https://github.com/kubesysadm/kubesysadm)
+[![Release](https://img.shields.io/github/release/kubesysadm/kubesysadm.svg)](https://github.com/kubesysadm/kubesysadm/releases)
+[![LICENSE](https://img.shields.io/github/license/kubesysadm/kubesysadm.svg)](https://github.com/kubesysadm/kubesysadm/blob/main/LICENSE)
 
-// https://goreportcard.com/report/kubesysadm.sysadm.cn/kubesysadm
 # kubesysadm
+[kubesysadm](https://kubesysadm.sysadm.cn/) is a management tool for managing kubernete's resource. It provides a suite 
+mechanisms and methods 
 // TODO(user): Add simple overview of use/purpose
 
 ## Description
