@@ -1,9 +1,33 @@
-# kubesysadm
-// TODO(user): Add simple overview of use/purpose
+<a href="https://www.sysadm.cn">
+    <img src="https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/docs/images/kubesysadm.png"/>
+</a>
 
-## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+---
+[![Go Report Card](https://goreportcard.com/badge/github.com/kubesysadm/kubesysadm)](https://goreportcard.com/report/github.com/kubesysadm/kubesysadm)
+[![RepoSize](https://img.shields.io/github/repo-size/kubesysadm/kubesysadm.svg)](https://github.com/kubesysadm/kubesysadm)
+[![Release](https://img.shields.io/github/release/kubesysadm/kubesysadm.svg)](https://github.com/kubesysadm/kubesysadm/releases)
+[![LICENSE](https://img.shields.io/github/license/kubesysadm/kubesysadm.svg)](https://github.com/kubesysadm/kubesysadm/blob/main/LICENSE)
 
+# kubesysadm(KuberSysAdm)
+[kubesysadm](https://kubesysadm.sysadm.cn/) is a management tool for managing kubernete's resource. It is short for 
+KUBErnete SYStem ADMInistration. And it provides a suite mechanisms and methods to manage resource of kubernetes.
+
+Kubesysadm is based on kubernetes Operator technoloygy. And it focuses on automated operations and maintenance of kubernetes clusters. 
+
+## Features
+Now the features of kubesysadm described as the following:
+- Automatically restart the workload gracefully
+  we know that the workload(Deployment, statefulSet, DaemaonSet) does not automatically restart gracefully when the configMap/secret
+  referenced by the workload changes. This results in updates to configMap not being applied to the workload in a timely manner.
+  
+  kubesysadm can monitor the configMaps/secrets referenced by workloads based on user-configured rules.  Kubesysadm will restart 
+  the workload gracefully when it finds the configMap/secret referenced by the workload has changed.
+
+
+- Monitoring rule configuration
+  users can configure the monitoring rules.
+
+  
 ## Getting Started
 
 ### Prerequisites
@@ -90,11 +114,10 @@ kubectl apply -f https://raw.githubusercontent.com/<org>/kubesysadm/<tag or bran
 ```
 
 ## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
 
 **NOTE:** Run `make help` for more information on all potential `make` targets
 
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
+More information can be found via the [community](https://github.com/kubesysadm/community)
 
 ## License
 
