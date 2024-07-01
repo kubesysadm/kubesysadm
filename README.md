@@ -7,8 +7,9 @@
 [![RepoSize](https://img.shields.io/github/repo-size/kubesysadm/kubesysadm.svg)](https://github.com/kubesysadm/kubesysadm)
 [![Release](https://img.shields.io/github/release/kubesysadm/kubesysadm.svg)](https://github.com/kubesysadm/kubesysadm/releases)
 [![LICENSE](https://img.shields.io/github/license/kubesysadm/kubesysadm.svg)](https://github.com/kubesysadm/kubesysadm/blob/main/LICENSE)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/9148/badge)](https://www.bestpractices.dev/projects/9148)
 
-# kubesysadm(KuberSysAdm)
+# kubesysadm(Kubernetes System Administration)
 [kubesysadm](https://kubesysadm.sysadm.cn/) is a management tool for managing kubernete's resource. It is short for 
 KUBErnete SYStem ADMInistration. And it provides a suite mechanisms and methods to manage resource of kubernetes.
 
