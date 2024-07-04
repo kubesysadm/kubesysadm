@@ -2,8 +2,6 @@ module github.com/kubesysadm/kubesysadm
 
 go 1.22.0
 
-toolchain go1.22.2
-
 require (
 	github.com/onsi/ginkgo/v2 v2.15.0
 	github.com/onsi/gomega v1.31.0

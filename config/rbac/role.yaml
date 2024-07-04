@@ -30,3 +30,29 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - monitoring.sysadm.cn
+  resources:
+  - podcleanrule
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitoring.sysadm.cn
+  resources:
+  - podcleanrule/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - monitoring.sysadm.cn
+  resources:
+  - podcleanrule/status
+  verbs:
+  - get
+  - patch
+  - update
