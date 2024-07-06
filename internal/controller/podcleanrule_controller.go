@@ -18,7 +18,7 @@ package controller
 
 import (
 	"context"
-	monitoringv1beta1 "github.com/kubesysadm/kubesysadm/api/v1beta1"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -30,10 +30,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"strings"
 	"time"
-	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	monitoringv1beta1 "github.com/kubesysadm/kubesysadm/api/v1beta1"
 )
 
 // PodCleanRuleReconciler reconciles a PodCleanRule object
