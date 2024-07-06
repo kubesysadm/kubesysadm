@@ -46,6 +46,12 @@ spec:
               namespace:
                 description: NameSpace the namespace where the pod in is to be monitoring
                 type: string
+              prefixname:
+                description: |-
+                  PrefixName the prefix of the pods' name which will be deleted.
+                  normally, prefixname is the workload name. All pods in the NameSpace field specified
+                  will be deleted if this field is empty.
+                type: string
             type: object
         type: object
     served: true
