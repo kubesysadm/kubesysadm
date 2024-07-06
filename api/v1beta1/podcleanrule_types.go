@@ -23,6 +23,11 @@ type PodCleanRuleSpec struct {
 	// NameSpace the namespace where the pod in is to be monitoring
 	NameSpace string `json:"namespace,omitempty" protobuf:"bytes,3,opt,name=namespace"`
 
+	// PrefixName the prefix of the pods' name which will be deleted.
+	// normally, prefixname is the workload name. All pods in the NameSpace field specified
+	// will be deleted if this field is empty.
+	PrefixName string `json:"prefixname,omitempty" protobuf:"bytes,opt,name=prefixname"`
+
 	// Age how long the pod is no-running which will to be deleted
 	Age int32 `json:"age,omitempty" protobuf:"opt,name=age"`
 }

@@ -19,10 +19,17 @@ package controller
 import (
 	"context"
 	monitoringv1beta1 "github.com/kubesysadm/kubesysadm/api/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"strings"
+	"time"
 )
 
 // PodCleanRuleReconciler reconciles a PodCleanRule object
@@ -54,6 +61,67 @@ func (r *PodCleanRuleReconciler) Reconcile(ctx context.Context, req ctrl.Request
 func (r *PodCleanRuleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	b := ctrl.NewControllerManagedBy(mgr)
 	b.For(&monitoringv1beta1.PodCleanRule{})
+	b.Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(r.startPodCleanProcess),
+		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 	return b.Complete(r)
+}
 
+func (r *PodCleanRuleReconciler) startPodCleanProcess(ctx context.Context, pod client.Object) []reconcile.Request {
+	logger := log.FromContext(ctx)
+
+	var podCleanRuleList monitoringv1beta1.PodCleanRuleList
+	e := r.List(ctx, &podCleanRuleList)
+	if e != nil {
+		logger.Error(e, "get pod clean rule list error")
+		return nil
+	}
+
+	for _, item := range podCleanRuleList.Items {
+		e := r.cleaningPodForRule(ctx, item)
+		if e != nil {
+			logger.Error(e, "cleaning pods with rule error ", "namespace", item.Spec.NameSpace, "age", item.Spec.Age)
+		}
+	}
+
+	return nil
+}
+
+func (r *PodCleanRuleReconciler) cleaningPodForRule(ctx context.Context, rule monitoringv1beta1.PodCleanRule) error {
+	logger := log.FromContext(ctx)
+
+	ns := rule.Spec.NameSpace
+	age := rule.Spec.Age
+	prefixName := strings.TrimSpace(rule.Spec.PrefixName)
+
+	podList := corev1.PodList{}
+	listOpts := &client.ListOptions{Namespace: ns}
+	e := r.Client.List(ctx, &podList, listOpts)
+	if e != nil {
+		return e
+	}
+
+	for _, item := range podList.Items {
+		if item.Status.Phase == corev1.PodPending || item.Status.Phase == corev1.PodRunning || item.Status.Phase == corev1.PodUnknown {
+			continue
+		}
+		podName := item.Name
+		createTime := item.ObjectMeta.CreationTimestamp
+		nowTime := time.Now()
+		difference := nowTime.Sub(createTime.Time)
+		if difference.Seconds() > float64(age*1000*1000) {
+			if prefixName != "" && !strings.HasPrefix(podName, prefixName) {
+				continue
+			}
+			deletePod := item
+			e := r.Client.Delete(ctx, &deletePod, &client.DeleteOptions{})
+			if e != nil {
+				logger.Error(e, "clean pod error", "namespace", ns, "podName", podName)
+			} else {
+				logger.Info("pod has be deleted ", "namespace", ns, "podName", podName)
+			}
+
+		}
+	}
+
+	return nil
 }
