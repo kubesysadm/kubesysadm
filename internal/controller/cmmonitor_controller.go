@@ -66,6 +66,12 @@ func (r *CmMonitorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	return ctrl.Result{}, nil
 }
 
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;patch;update;watch
+//+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;patch;update;watch
+//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;patch;update;watch
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *CmMonitorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	b := ctrl.NewControllerManagedBy(mgr)

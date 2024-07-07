@@ -5,6 +5,74 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/status
+  verbs:
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - monitoring.sysadm.cn
   resources:
   - cmmonitors
@@ -33,7 +101,7 @@ rules:
 - apiGroups:
   - monitoring.sysadm.cn
   resources:
-  - podcleanrule
+  - podcleanrules
   verbs:
   - create
   - delete
@@ -45,13 +113,13 @@ rules:
 - apiGroups:
   - monitoring.sysadm.cn
   resources:
-  - podcleanrule/finalizers
+  - podcleanrules/finalizers
   verbs:
   - update
 - apiGroups:
   - monitoring.sysadm.cn
   resources:
-  - podcleanrule/status
+  - podcleanrules/status
   verbs:
   - get
   - patch
