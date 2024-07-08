@@ -23,24 +23,68 @@ Kubesysadm is based on kubernetes Operator technoloygy. And it focuses on automa
 ## Features
 Now the features of kubesysadm described as the following:
 - Automatically restart the workload gracefully
+  
   we know that the workload(Deployment, statefulSet, DaemaonSet) does not automatically restart gracefully when the configMap/secret
   referenced by the workload changes. This results in updates to configMap not being applied to the workload in a timely manner.
   
   kubesysadm can monitor the configMaps/secrets referenced by workloads based on user-configured rules.  Kubesysadm will restart 
   the workload gracefully when it finds the configMap/secret referenced by the workload has changed.
 
+- Automatically cleaning no-running Pods
+  We know that no-running(Such as Completed, Error) Pods in K8S cluster are not be deleted automatically. Kubesysadm can 
+  delete the no-running pods according to the rules which be configured by user.
+
+- Pod cleaning rules configuration
+  User can configure the rules for deleting no-running
 
 - Monitoring rule configuration
   users can configure the monitoring rules.
 
   
-## Getting Started
+## Quick Start Guide
 
 ### Prerequisites
-- go version v1.22.0+
-- docker version 17.03+.
-- kubectl version v1.11.3+.
-- Access to a Kubernetes v1.11.3+ cluster.
+- kubectl version v1.12+ with CRD support.
+- Access to a Kubernetes v1.12+ cluster.
+
+### Install CRD and instance of Kubesysadm into the cluster
+Install Kubesysadm on an existing Kubernetes cluster. This way is both available for x86_64 and arm64 architecture.
+```
+  kubectl apply -f https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/installer/install.yaml
+```
+
+Enjoy! Kubesysadm will create the following resources in the cluster
+```
+namespace/kubesysadm-system created
+customresourcedefinition.apiextensions.k8s.io/cmmonitors.monitoring.sysadm.cn created
+customresourcedefinition.apiextensions.k8s.io/podcleanrules.monitoring.sysadm.cn created
+serviceaccount/kubesysadm-controller-manager created
+role.rbac.authorization.k8s.io/kubesysadm-leader-election-role created
+clusterrole.rbac.authorization.k8s.io/kubesysadm-cmmonitor-editor-role created
+clusterrole.rbac.authorization.k8s.io/kubesysadm-cmmonitor-viewer-role created
+clusterrole.rbac.authorization.k8s.io/kubesysadm-manager-role created
+clusterrole.rbac.authorization.k8s.io/kubesysadm-metrics-reader created
+clusterrole.rbac.authorization.k8s.io/kubesysadm-proxy-role created
+rolebinding.rbac.authorization.k8s.io/kubesysadm-leader-election-rolebinding created
+clusterrolebinding.rbac.authorization.k8s.io/kubesysadm-manager-rolebinding created
+clusterrolebinding.rbac.authorization.k8s.io/kubesysadm-proxy-rolebinding created
+service/kubesysadm-controller-manager-metrics-service created
+deployment.apps/kubesysadm-controller-manager created
+```
+Check whether kubesysadm controller is running by the following command
+```
+kubectl get po -n kubesysadm-system
+```
+
+The output of the above command like the following showing
+```
+NAME                                             READY   STATUS    RESTARTS   AGE
+kubesysadm-controller-manager-5f78865594-b6gsc   2/2     Running   0          2m30s
+```
+
+### Configure configMap monitoring rules
+
+
 
 ### To Deploy on the cluster
 **Build and push your image to the location specified by `IMG`:**

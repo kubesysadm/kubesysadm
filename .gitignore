@@ -70,3 +70,6 @@ myDocs
 
 # yamls for local testing
 testYamls
+
+# generated samples by make manifests
+config/samples
