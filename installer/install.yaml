@@ -47,13 +47,83 @@ spec:
           spec:
             description: CmMonitorSpec defines the desired state of CmMonitor
             properties:
-              foo:
-                description: Foo is an example field of CmMonitor. Edit cmmonitor_types.go
-                  to remove/update
+              kind:
+                description: Kind configMap or secret
+                type: string
+              name:
+                description: Name of configMap of Secret which will be monitored
+                type: string
+              namespace:
+                description: NameSpace the namespace which the configMap or Secret
+                  monitored in
                 type: string
             type: object
           status:
             description: CmMonitorStatus defines the observed state of CmMonitor
+            properties:
+              lastVersion:
+                description: last version of configMap or Secret
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: podcleanrules.monitoring.sysadm.cn
+spec:
+  group: monitoring.sysadm.cn
+  names:
+    kind: PodCleanRule
+    listKind: PodCleanRuleList
+    plural: podcleanrules
+    singular: podcleanrule
+  scope: Namespaced
+  versions:
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: PodCleanRule is the Schema for the PodCleanRule API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: PodCleanRuleSpec defines the spec for cleaning pod rules
+            properties:
+              age:
+                description: Age how long the pod is no-running which will to be deleted
+                format: int32
+                type: integer
+              namespace:
+                description: NameSpace the namespace where the pod in is to be monitoring
+                type: string
+              prefixname:
+                description: |-
+                  PrefixName the prefix of the pods' name which will be deleted.
+                  normally, prefixname is the workload name. All pods in the NameSpace field specified
+                  will be deleted if this field is empty.
+                type: string
             type: object
         type: object
     served: true
@@ -83,6 +153,8 @@ rules:
   - ""
   resources:
   - configmaps
+  - secrets
+  - pods
   verbs:
   - get
   - list
@@ -123,6 +195,7 @@ rules:
   - monitoring.sysadm.cn
   resources:
   - cmmonitors
+  - podcleanrules
   verbs:
   - create
   - delete
@@ -150,6 +223,7 @@ rules:
   - monitoring.sysadm.cn
   resources:
   - cmmonitors
+  - podcleanrules
   verbs:
   - get
   - list
@@ -166,6 +240,74 @@ kind: ClusterRole
 metadata:
   name: kubesysadm-manager-role
 rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/status
+  verbs:
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - monitoring.sysadm.cn
   resources:
@@ -188,6 +330,32 @@ rules:
   - monitoring.sysadm.cn
   resources:
   - cmmonitors/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - monitoring.sysadm.cn
+  resources:
+  - podcleanrules
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitoring.sysadm.cn
+  resources:
+  - podcleanrules/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - monitoring.sysadm.cn
+  resources:
+  - podcleanrules/status
   verbs:
   - get
   - patch
@@ -345,7 +513,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: kubesysadm-controller:latest
+        image: kubesysadm/kubesysadm-controller:v0.2
         livenessProbe:
           httpGet:
             path: /healthz

@@ -40,9 +40,11 @@ type PodCleanRuleReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=monitoring.sysadm.cn,resources=podcleanrule,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=monitoring.sysadm.cn,resources=podcleanrule/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=monitoring.sysadm.cn,resources=podcleanrule/finalizers,verbs=update
+//+kubebuilder:rbac:groups=monitoring.sysadm.cn,resources=podcleanrules,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=monitoring.sysadm.cn,resources=podcleanrules/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=monitoring.sysadm.cn,resources=podcleanrules/finalizers,verbs=update
+//+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;delete;deletecollection;patch
+//+kubebuilder:rbac:groups="",resources=pods/status,verbs=get;list;watch;delete;deletecollection;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -110,7 +112,7 @@ func (r *PodCleanRuleReconciler) cleaningPodForRule(ctx context.Context, rule mo
 		createTime := item.ObjectMeta.CreationTimestamp
 		nowTime := time.Now()
 		difference := nowTime.Sub(createTime.Time)
-		if difference.Seconds() > float64(age*1000*1000) {
+		if int32(difference.Seconds()) > age {
 			if prefixName != "" && !strings.HasPrefix(podName, prefixName) {
 				continue
 			}

@@ -11,6 +11,7 @@ rules:
   - monitoring.sysadm.cn
   resources:
   - cmmonitors
+  - podcleanrules
   verbs:
   - get
   - list

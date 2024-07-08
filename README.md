@@ -16,6 +16,7 @@ KUBErnete SYStem ADMInistration. And it provides a suite mechanisms and methods 
 
 
 
+
 Kubesysadm is based on kubernetes Operator technoloygy. And it focuses on automated operations and maintenance of kubernetes clusters. 
 
 
