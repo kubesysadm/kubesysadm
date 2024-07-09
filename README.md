@@ -14,9 +14,6 @@
 [kubesysadm](https://kubesysadm.sysadm.cn/) is a management tool for managing kubernete's resource. It is short for 
 KUBErnete SYStem ADMInistration. And it provides a suite mechanisms and methods to manage resource of kubernetes.
 
-
-
-
 Kubesysadm is based on kubernetes Operator technoloygy. And it focuses on automated operations and maintenance of kubernetes clusters. 
 
 
@@ -47,7 +44,7 @@ Now the features of kubesysadm described as the following:
 - kubectl version v1.12+ with CRD support.
 - Access to a Kubernetes v1.12+ cluster.
 
-### Install CRD and instance of Kubesysadm into the cluster
+### Install CRD and instance of Kubesysadm into  cluster
 Install Kubesysadm on an existing Kubernetes cluster. This way is both available for x86_64 and arm64 architecture.
 ```
   kubectl apply -f https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/installer/install.yaml
@@ -83,91 +80,133 @@ kubesysadm-controller-manager-5f78865594-b6gsc   2/2     Running   0          2m
 ```
 
 ### Configure configMap monitoring rules
+In the following example we will to do the following things:
+- Create a namespace named test-kubesysadm
+- Create a configMap named cm-env in test-kubesysadm namespace
+- Create a configMap named cm-mount in test-kubesysadm namespace
+- Create configMap monitoring rules named cm-env and cm-mount
+- Create a deployment named test-kubesysadm in test-kubesysadm namespace which using cm-env and cm-mount configMap
 
-
-
-### To Deploy on the cluster
-**Build and push your image to the location specified by `IMG`:**
-
-```sh
-make docker-build docker-push IMG=<some-registry>/kubesysadm:tag
+We create the above resource by the following commands:
+```azure
+  kubectl apply -f https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/installer/configMap/create_ns.yaml
+  kubectl apply -f https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/installer/configMap/cm-env.yaml
+  kubectl apply -f https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/installer/configMap/cm-mount.yaml
+  kubectl apply -f https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/installer/configMap/cmmonitor_cm-env.yaml    
+  kubectl apply -f https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/installer/configMap/cmmonitor_cm-mount.yaml
+  kubectl apply -f https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/installer/configMap/deploy.yaml
 ```
 
-**NOTE:** This image ought to be published in the personal registry you specified.
-And it is required to have access to pull the image from the working environment.
-Make sure you have the proper permission to the registry if the above commands don’t work.
-
-**Install the CRDs into the cluster:**
-
-```sh
-make install
+Now we try to check the results
+We get the pods' status by the following command
+```azure
+  kubectl get po -n test-kubesysadm
 ```
 
-**Deploy the Manager to the cluster with the image specified by `IMG`:**
+<img src="https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/docs/images/mornitoring_cm_started.png"/>
 
-```sh
-make deploy IMG=<some-registry>/kubesysadm:tag
+Then we try to change cm-env/cm-mount configMap by the following command. After that, we will find that the pods of
+deployment test-kubesysadm will be restared like the following image shown.
+```azure
+  kubectl edit cm -n test-kubesysadm cm-env/cm-mount 
 ```
 
-> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
-privileges or be logged in as admin.
+<img src="https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/docs/images/mornitoring_cm_restart.png"/>
 
-**Create instances of your solution**
-You can apply the samples (examples) from the config/sample:
+### Configure secret monitoring rules
+Like configMap, in the following example we will to do the following things:
+- Create a namespace named test-kubesysadm
+- Create a secret named secret-env in test-kubesysadm namespace
+- Create a secret named secret-mount in test-kubesysadm namespace
+- Create secret monitoring rules named secret-env and secret-mount
+- Create a deployment named test-kubesysadm in test-kubesysadm namespace which using secret-env and secret-mount secret
 
-```sh
-kubectl apply -k config/samples/
+We create the above resource by the following commands:
+```azure
+  kubectl apply -f https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/installer/secret/create_ns.yaml
+  kubectl apply -f https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/installer/secret/secret_env.yaml
+  kubectl apply -f https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/installer/secret/secret_mount.yaml 
+  kubectl apply -f https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/installer/secret/cmmonitor_secret-env.yaml    
+  kubectl apply -f https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/installer/secret/cmmonitor_secret-mount.yaml
+  kubectl apply -f https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/installer/secret/deploy.yaml
 ```
 
->**NOTE**: Ensure that the samples has default values to test it out.
-
-### To Uninstall
-**Delete the instances (CRs) from the cluster:**
-
-```sh
-kubectl delete -k config/samples/
+Now we try to check the results
+We get the pods' status by the following command
+```azure
+  kubectl get po -n test-kubesysadm
 ```
 
-**Delete the APIs(CRDs) from the cluster:**
+<img src="https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/docs/images/mornitoring_cm_started.png"/>
 
-```sh
-make uninstall
+Then we try to change secret-env/secret-mount secret by the following command. After that, we will find that the pods of
+deployment test-kubesysadm will be restared like the following image shown.
+```azure
+  kubectl edit secret -n test-kubesysadm secret-env/secret-mount
 ```
 
-**UnDeploy the controller from the cluster:**
+<img src="https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/docs/images/mornitoring_cm_restart.png"/>
 
-```sh
-make undeploy
+
+### Configure Pod Cleaning rules
+In the following example we will to do the following things:
+- Create a namespace named test-kubesysadm
+- Create a Job named job1
+- Create a PodCleanRule named cleanpods. The age value of rule is 300 and namespace is test-kubesysadm. That meaning is 
+  PodCleanManager will clean the pods which created before 5 minutes and in no-running/no-pending status.
+
+We create the above resource by the following commands:
+```azure
+  kubectl apply -f https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/installer/podclean/create_ns.yaml
+  kubectl apply -f https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/installer/podclean/podcleanrule.yaml
+  kubectl apply -f https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/installer/podclean/job.yaml
 ```
 
-## Project Distribution
-
-Following are the steps to build the installer and distribute this project to users.
-
-1. Build the installer for the image built and published in the registry:
-
-```sh
-make build-installer IMG=<some-registry>/kubesysadm:tag
+Now we try to check the results
+We get the pods' status by the following command
+```azure
+  kubectl get po -n test-kubesysadm
 ```
 
-NOTE: The makefile target mentioned above generates an 'install.yaml'
-file in the dist directory. This file contains all the resources built
-with Kustomize, which are necessary to install this project without
-its dependencies.
+<img src="https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/docs/images/job_pods.png"/>
 
-2. Using the installer
-
-Users can just run kubectl apply -f <URL for YAML BUNDLE> to install the project, i.e.:
-
-```sh
-kubectl apply -f https://raw.githubusercontent.com/<org>/kubesysadm/<tag or branch>/dist/install.yaml
+We found that all pods in "Completed" status in test-kubesysadm namespace have be deleted after 5 minutes when we re-run 
+the above command. And we get the log message like the following image shown when we run the following command.
+```azure
+   kubectl logs -n kubesysadm-system kubesysadm-controller-manager-5f78865594-b6gsc
 ```
 
-## Contributing
+<img src="https://raw.githubusercontent.com/kubesysadm/kubesysadm/main/docs/images/podcleanmessage.png"/>
 
-**NOTE:** Run `make help` for more information on all potential `make` targets
+## Contributing/贡献
+### English
+All those who are interested in the kubesysadm project are welcome to contribute to kubesysadm.
+We encourage you to communicate in English, but do not exclude Chinese.
+The [Contributor Guide](https://raw.githubusercontent.com/kubesysadm/community/contribute.md) provides detailed instruction on how to get your ideas and bug fixes seen and accepted, including:
+
+1. How to [find something to work on](https://raw.githubusercontent.com/kubesysadm/community/contribute.md#find-something-to-work-on)
+1. How to [create a pull request](https://raw.githubusercontent.com/kubesysadm/community/contribute.md#creating-pull-requests)
+1. How to [code review](https://raw.githubusercontent.com/kubesysadm/community/contribute.md#code-review)
+
+If you're interested in being a contributor and want to get involved in
+developing the Kubesysadm code, please see [contribute](https://raw.githubusercontent.com/kubesysadm/community/contribute.md) for
+details on submitting patches and the contribution workflow.
 
 More information can be found via the [community](https://github.com/kubesysadm/community)
+
+### 中文
+我们非常欢迎所有对kubesysadm项目感兴趣的人为kubesysadm做出贡献。
+我们鼓励您用英文进行沟通，但是不排斥中文。
+[贡献者向导](https://raw.githubusercontent.com/kubesysadm/community/contribute.md) 为您提供了一个详细的说明，以便我们更容易的接受您的想法或者您为修正Bug而做的贡献，它包括：
+
+1. [如何找到适合自已做的事情](https://raw.githubusercontent.com/kubesysadm/community/contribute.md#find-something-to-work-on)
+2. [如何创建一个PR](https://raw.githubusercontent.com/kubesysadm/community/contribute.md#creating-pull-requests)
+3. [如何Review代码](https://raw.githubusercontent.com/kubesysadm/community/contribute.md#code-review)
+
+如果你有兴趣成为一个贡献者，并希望参与Kubesysadm代码的开发，请参阅提交补丁和贡献工作流程细节
+[contribute](https://raw.githubusercontent.com/kubesysadm/community/contribute.md) 
+
+更多信息情参阅我们的社区 [community](https://github.com/kubesysadm/community)
 
 ## License
 

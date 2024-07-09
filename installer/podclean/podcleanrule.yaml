@@ -1,0 +1,10 @@
+apiVersion: monitoring.sysadm.cn/v1beta1
+kind: PodCleanRule
+metadata:
+  labels:
+    app.kubernetes.io/name: kubesysadm
+  name: cleanpods
+  namespace: test-kubesysadm
+spec:
+  namespace: test-kubesysadm
+  age: 300

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-env
+  labels:
+    app: test-kubesysadm
+  namespace: test-kubesysadm
+data:
+  container_env_user: "testUser"
+  container_env_passwd: "test1234"

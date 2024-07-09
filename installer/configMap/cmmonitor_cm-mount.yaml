@@ -1,0 +1,11 @@
+apiVersion: monitoring.sysadm.cn/v1beta1
+kind: CmMonitor
+metadata:
+  labels:
+    app.kubernetes.io/name: kubesysadm
+  name: cm-mount
+  namespace: test-kubesysadm
+spec:
+  namespace: test-kubesysadm
+  name: cm-mount
+  kind: configMap
