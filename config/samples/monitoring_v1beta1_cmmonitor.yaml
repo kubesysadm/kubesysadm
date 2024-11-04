@@ -1,9 +1,0 @@
-apiVersion: monitoring.sysadm.cn/v1beta1
-kind: CmMonitor
-metadata:
-  labels:
-    app.kubernetes.io/name: kubesysadm
-    app.kubernetes.io/managed-by: kustomize
-  name: cmmonitor-sample
-spec:
-  # TODO(user): Add fields here
